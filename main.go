@@ -10,18 +10,6 @@ import (
 	"os"
 )
 
-type Request struct {
-	Numbers []int `json:"numbers"`
-}
-
-type Response struct {
-	Result int `json:"result"`
-}
-
-type ErrorResponse struct {
-	Error string `json:"error"`
-}
-
 func logRequest(r *http.Request) {
 	log.Println("--- New Request ---")
 	log.Printf("Method: %s", r.Method)
@@ -49,33 +37,31 @@ func sumHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var req Request
-	err := json.NewDecoder(r.Body).Decode(&req)
+	var numbers []int
+	err := json.NewDecoder(r.Body).Decode(&numbers)
 	if err != nil {
 		log.Printf("Error decoding JSON: %v", err)
-		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(ErrorResponse{Error: "Invalid input. Unable to parse JSON."})
+		http.Error(w, "Invalid input. Unable to parse JSON.", http.StatusBadRequest)
 		return
 	}
 
-	log.Printf("Parsed request: %+v", req)
+	log.Printf("Parsed numbers: %v", numbers)
 
-	if len(req.Numbers) == 0 {
+	if len(numbers) == 0 {
 		log.Println("Empty numbers array")
-		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(ErrorResponse{Error: "Invalid input. Please provide an array of integers in the \"numbers\" field."})
+		http.Error(w, "Invalid input. Please provide an array of integers.", http.StatusBadRequest)
 		return
 	}
 
 	sum := 0
-	for _, num := range req.Numbers {
+	for _, num := range numbers {
 		sum += num
 	}
 
 	log.Printf("Calculated sum: %d", sum)
 
-	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(Response{Result: sum})
+	w.Header().Set("Content-Type", "text/plain")
+	fmt.Fprint(w, sum)
 }
 
 func healthCheckHandler(w http.ResponseWriter, r *http.Request) {
